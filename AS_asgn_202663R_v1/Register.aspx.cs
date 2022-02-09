@@ -337,7 +337,7 @@ namespace AS_asgn_202663R_v1
                 smtp.Host = "smtp.gmail.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential(senderEmail, "qgzraxshpxytawvn");
+                smtp.Credentials = new NetworkCredential(senderEmail, emailPwd);
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
                 smtp.Send(message);
 
