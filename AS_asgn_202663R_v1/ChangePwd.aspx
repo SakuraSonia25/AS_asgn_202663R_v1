@@ -55,7 +55,7 @@
         legend{
             text-align:center;
         }
-        #btn_change, #btn_hmpg{
+        #btn_change, #btn_hmpg, #btn_login{
             background-color: dodgerblue;
             color: lightgoldenrodyellow;
             border-radius: 4px;
@@ -88,7 +88,7 @@
                     <td><asp:Label ID="lbl_erCfnewPwd" runat="server" Text=""></asp:Label></td>
                 </tr>
                  <tr>
-                    <td><asp:Button ID="btn_hmpg" runat="server" Text="Back to homepage" style="margin-top:15px" OnClick="btn_hmpg_Click"/></td>
+                    <td><asp:Button ID="btn_hmpg" runat="server" Text="Back to homepage" style="margin-top:15px" OnClick="btn_hmpg_Click"/><asp:Button ID="btn_login" runat="server" Text="Back to login" style="margin-top:15px" Visible="false" OnClick="btn_login_Click" /></td>
                     <td><asp:Button ID="btn_change" runat="server" Text="Change" style="margin-top:15px" OnClick="btn_change_Click"/></td>
                     <td></td>
                 </tr>

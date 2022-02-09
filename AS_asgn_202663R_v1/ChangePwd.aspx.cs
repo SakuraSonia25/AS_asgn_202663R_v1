@@ -22,7 +22,66 @@ namespace AS_asgn_202663R_v1
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            lbl_erCfnewPwd.Text = "";
+            lbl_errCurrPwd.Text = "";
 
+            if (Session["LoggedIn"] != null && Session["AuthToken"] != null && Request.Cookies["AuthToken"] != null)
+            {
+                if (!Session["AuthToken"].ToString().Equals(Request.Cookies["AuthToken"].Value))
+                {
+                    if (Session["ChangePassword"] == null)
+                    {
+                        Response.Redirect("Login.aspx", false);
+                        if (Request.Cookies["ASP.NET_SessionId"] != null)
+                        {
+                            Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
+                            Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.Now.AddMonths(-20);
+                        }
+
+                        if (Request.Cookies["AuthToken"] != null)
+                        {
+                            Response.Cookies["AuthToken"].Value = string.Empty;
+                            Response.Cookies["AuthToken"].Expires = DateTime.Now.AddMonths(-20);
+                        }
+                    }
+                    else
+                    {
+                        email = Session["ChangePassword"].ToString();
+                        btn_hmpg.Visible = false;
+                        btn_login.Visible = true;
+                    }
+                    
+                }
+                else
+                {
+                    email = Session["LoggedIn"].ToString();
+                }
+
+            }
+            else
+            {
+                if (Session["ChangePassword"] == null)
+                {
+                    Response.Redirect("Login.aspx", false);
+                    if (Request.Cookies["ASP.NET_SessionId"] != null)
+                    {
+                        Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
+                        Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.Now.AddMonths(-20);
+                    }
+
+                    if (Request.Cookies["AuthToken"] != null)
+                    {
+                        Response.Cookies["AuthToken"].Value = string.Empty;
+                        Response.Cookies["AuthToken"].Expires = DateTime.Now.AddMonths(-20);
+                    }
+                }
+                else
+                {
+                    email = Session["ChangePassword"].ToString();
+                    btn_hmpg.Visible = false;
+                    btn_login.Visible = true;
+                }
+            }
         }
 
         protected string HashPassword(string salt, string pwd)
@@ -33,12 +92,10 @@ namespace AS_asgn_202663R_v1
             string currPwdhash = Convert.ToBase64String(hashWithSalt);
 
             return currPwdhash;
-
         }
 
         protected void btn_change_Click(object sender, EventArgs e)
         {
-            email= Session["LoggedIn"].ToString();
             currPwd = tb_currPwd.Text.Trim();
             newPwd = tb_newPwd.Text.Trim();
             newPwd2 = tb_cfnewPwd.Text.Trim();
@@ -53,69 +110,80 @@ namespace AS_asgn_202663R_v1
 
                 if (currPwdhash.Equals(dbpwd))
                 { 
-                    if (pwdChecker(newPwd) < 4)
+                    if (GetPwdDateTime(email).AddMinutes(5) <= DateTime.Now)
                     {
-                        //hvErr = true;
-                        int score = pwdChecker(newPwd);
-                        string status = "";
-                        switch (score)
+                        if (pwdChecker(newPwd) < 4)
                         {
-                            case 0:
-                                status = "Very Weak";
-                                break;
-                            case 1:
-                                status = "Very Weak";
-                                break;
-                            case 2:
-                                status = "Weak";
-                                break;
-                            case 3:
-                                status = "Medium";
-                                break;
-                            default:
-                                break;
-                        }
-                        lbl_errNewPwd.Text = "Password is " + status;
-                        lbl_errNewPwd.ForeColor = Color.Red;
-                        lbl_errNewPwd.Visible = true;
-                    }
-                    else
-                    {
-                        string currNewhash = HashPassword(salt, newPwd);
-
-                        if (currNewhash != GetPastPwd1(email) && currNewhash != GetPastPwd2(email))
-                        {
-                            lbl_errNewPwd.Text = "";
-                            if (newPwd == newPwd2)
+                            //hvErr = true;
+                            int score = pwdChecker(newPwd);
+                            string status = "";
+                            switch (score)
                             {
-                                // change pwd function
-                                ChangePassword();
-                                lbl_erCfnewPwd.Text = "Password changed";
-                                lbl_erCfnewPwd.ForeColor = Color.Green;
+                                case 0:
+                                    status = "Very Weak";
+                                    break;
+                                case 1:
+                                    status = "Very Weak";
+                                    break;
+                                case 2:
+                                    status = "Weak";
+                                    break;
+                                case 3:
+                                    status = "Medium";
+                                    break;
+                                default:
+                                    break;
                             }
-                            else
-                            {
-                                lbl_erCfnewPwd.Text = "Not Match with above password";
-                                lbl_erCfnewPwd.ForeColor = Color.Red;
-                                lbl_erCfnewPwd.Visible = true;
-                            }
-                        }
-                        else
-                        {
-                            lbl_errNewPwd.Text = "This Password is the same as past passwords";
+                            lbl_errNewPwd.Text = "Password is " + status;
                             lbl_errNewPwd.ForeColor = Color.Red;
                             lbl_errNewPwd.Visible = true;
                         }
+                        else
+                        {
+                            string currNewhash = HashPassword(salt, newPwd);
+
+                            if (currNewhash != GetPastPwd1(email) && currNewhash != GetPastPwd2(email) && currNewhash != dbpwd)
+                            {
+                                lbl_errNewPwd.Text = "";
+                                if (newPwd == newPwd2)
+                                {
+                                    // change pwd function
+                                    ChangePassword();
+                                    lbl_erCfnewPwd.Text = "Password changed";
+                                    lbl_erCfnewPwd.ForeColor = Color.Green;
+                                }
+                                else
+                                {
+                                    lbl_erCfnewPwd.Text = "Not Match with above password";
+                                    lbl_erCfnewPwd.ForeColor = Color.Red;
+                                    lbl_erCfnewPwd.Visible = true;
+                                }
+                            }
+                            else
+                            {
+                                lbl_errNewPwd.Text = "This Password is the same as past passwords";
+                                lbl_errNewPwd.ForeColor = Color.Red;
+                                lbl_errNewPwd.Visible = true;
+                            }
                    
+                                            }
                     }
+                    else
+                    {
+                        lbl_errCurrPwd.Text = "Minimum Password Age is 5min.";
+                        lbl_errCurrPwd.ForeColor = Color.Red;
+                        lbl_errCurrPwd.Visible = true;
+                    }
+                    
+                }
+                else
+                {
+                    lbl_errCurrPwd.Text = "Incorrect Password";
+                    lbl_errCurrPwd.ForeColor = Color.Red;
+                    lbl_errCurrPwd.Visible = true;
                 }
             }
-            else
-            {
-                lbl_errCurrPwd.Text = "Incorrect Password";
-                lbl_errCurrPwd.ForeColor = Color.Red;
-                lbl_errCurrPwd.Visible = true;
-            }
+           
 
            
         }
@@ -301,6 +369,45 @@ namespace AS_asgn_202663R_v1
             return pwd;
         }
 
+        protected DateTime GetPwdDateTime(string email)
+        {
+            DateTime pwdDatetime = DateTime.Now;
+
+            SqlConnection connection = new SqlConnection(ConnectionString);
+            string sql = "select PwdDateTime FROM user_info WHERE Email=@email";
+            SqlCommand command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@email", email);
+            ;
+            try
+            {
+                connection.Open();
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+
+                    while (reader.Read())
+                    {
+                        if (reader["PwdDateTime"] != null)
+                        {
+                            if (reader["PwdDateTime"] != DBNull.Value)
+                            {
+                                pwdDatetime = Convert.ToDateTime(reader["PwdDateTime"]);
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.ToString());
+            }
+
+            finally { connection.Close(); }
+            return pwdDatetime;
+        }
+
+
         protected void UpdatePassword(string email, string pwd, int PastPwd)
         {
             SqlConnection connection = new SqlConnection(ConnectionString);
@@ -355,10 +462,39 @@ namespace AS_asgn_202663R_v1
                     UpdatePassword(email, currPwdhash, 2);
                 }
             }
+
+            SetPwdDateTime(email);
         }
 
+        protected void SetPwdDateTime(string email)
+        {
+            SqlConnection connection = new SqlConnection(ConnectionString);
+            string sql = "UPDATE user_info SET PwdDateTime = '"+ DateTime.Now +"' WHERE email=@email; ";
+        
+            SqlCommand command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@email", email);
+
+            try
+            {
+                connection.Open();
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.ToString());
+            }
+
+            finally { connection.Close(); }
+
+        }
         protected void btn_hmpg_Click(object sender, EventArgs e)
         {
+            Response.Redirect("Homepage.aspx", false);
+        }
+
+        protected void btn_login_Click(object sender, EventArgs e)
+        {
+            Session["ChangePassword"] = null;
             Response.Redirect("Homepage.aspx", false);
         }
     }

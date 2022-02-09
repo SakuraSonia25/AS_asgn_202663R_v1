@@ -4,6 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
+
     <style>
         fieldset {
             width: 400px;
@@ -19,7 +20,7 @@
         legend{
             text-align:center;
         }
-        #btn_login, #btn_register{
+        #btn_login, #btn_register, #btn_chgPwd{
             background-color: dodgerblue;
             color: lightgoldenrodyellow;
             border-radius: 4px;
@@ -28,11 +29,13 @@
         }
     </style>
     <title>Login</title>
-    <script src="https://www.google.com/recaptcha/api.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LfOS1oeAAAAAHiU_ZRc30kDVUmfewpE1xg8GsZ4"></script>
      <script>
-           function onSubmit(token) {
-             document.getElementById("demo-form").submit();
-           }
+         grecaptcha.ready(function () {
+             grecaptcha.execute('6LfOS1oeAAAAAHiU_ZRc30kDVUmfewpE1xg8GsZ4', { action: 'Login' }).then(function (token) {
+                 document.getElementById("g-recaptcha-response").value = token;
+             });
+         });
      </script>
 </head>
 <body>
@@ -50,15 +53,16 @@
                     <td><asp:Label ID="lbl_pwd" runat="server" Text="Password"></asp:Label> </td>
                     <td><asp:TextBox ID="tb_pwd" runat="server" TextMode="Password"></asp:TextBox></td>
                 </tr>
+                 <tr>
+                    <td></td>
+                    <td><asp:Button ID="btn_chgPwd" runat="server" Text="Change Password" style="margin-top:15px" Visible="false" OnClick="btn_chgPwd_Click"/></td>
+                </tr>
                 <tr>
                     <td></td>
                     <td colspan="2"><asp:Button ID="btn_login" runat="server" Text="Login" style="margin-top:15px" OnClick="btn_login_Click" />  <asp:Button ID="btn_register" runat="server" Text="Register" style="margin-top:15px" OnClick="btn_register_Click" /></td>
                 </tr>
             </table>
-               <button class="g-recaptcha" 
-            data-sitekey="6LfOS1oeAAAAAHiU_ZRc30kDVUmfewpE1xg8GsZ4" 
-            data-callback='onSubmit' 
-            data-action='submit'>Submit</button>
+                <div><input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response"/></div> 
         </fieldset>
 
     </form>

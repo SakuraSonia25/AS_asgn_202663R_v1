@@ -4,10 +4,13 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
+using System.Web.Script.Serialization;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -16,11 +19,182 @@ namespace AS_asgn_202663R_v1
     public partial class Login : System.Web.UI.Page
     {
         string ConnectionString = System.Configuration.ConfigurationManager.ConnectionStrings["ASasgnDB"].ConnectionString;
+        
+        public class MyObject
+        {
+            public string success { get; set; }
+            public List<string> ErrorMessage { get; set; }
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
 
         }
 
+        protected void btn_login_Click(object sender, EventArgs e)
+        {
+            string pwd = tb_pwd.Text.Trim();
+            string email = tb_email.Text.Trim();
+
+            int failedAttempts = GetfailAttempts(email);
+
+            if (ValidateCaptcha())
+            {
+                if (EmailExist(email) && IsEmailVerified(email))
+                {
+                    if (failedAttempts < 3)
+                    {
+                        SHA512Managed hashing = new SHA512Managed();
+                        string salt = getDBSalt(email);
+                        string dbpwd = getDBPwd(email);
+
+                        try
+                        {
+                            if (salt != null && salt.Length > 0 && dbpwd != null && dbpwd.Length > 0)
+                            {
+                                string pwdWithSalt = pwd + salt;
+                                byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
+                                string userHash = Convert.ToBase64String(hashWithSalt);
+
+                                if (userHash.Equals(dbpwd))
+                                {
+                                    if (GetLockoutEndTime(email) != "")
+                                    {
+                                        if (Convert.ToDateTime(GetLockoutEndTime(email)) <= DateTime.Now)
+                                        {
+                                            if (GetPwdDateTime(email).AddMinutes(10) > DateTime.Now)
+                                            {
+                                                SetLockoutEndTime(email, "");
+                                                SetfailAttempt(email, "reset");
+
+                                                CreateLoginAuditLog();
+
+                                                Session["LoggedIn"] = email;
+
+                                                // create a new GUID and save into the session
+                                                string guid = Guid.NewGuid().ToString();
+                                                Session["AuthToken"] = guid;
+
+                                                // now create a new cookie with this guid value
+                                                Response.Cookies.Add(new HttpCookie("AuthToken", guid));
+
+                                                Response.Redirect("Homepage.aspx", false);
+                                            }
+                                            else
+                                            {
+                                                btn_chgPwd.Visible = true;
+                                                btn_login.Visible = false;
+                                                btn_register.Visible = false;
+                                                lbl_errMsg.Text = "Your Password has exceeded the maximum password age. Please proceed to change your password.";
+                                                Session["ChangePassword"] = email;
+                                            }
+                                            
+                                        }
+                                        else
+                                        {
+                                            lbl_errMsg.Visible = true;
+                                            lbl_errMsg.Text = "Account has been locked. Try again in a minute";
+                                            lbl_errMsg.ForeColor = Color.Red;
+                                        }
+
+                                    }
+                                    else
+                                    {
+                                        if (GetPwdDateTime(email).AddMinutes(10) > DateTime.Now)
+                                        {
+                                            SetfailAttempt(email, "reset");
+
+                                            CreateLoginAuditLog();
+
+                                            Session["LoggedIn"] = email;
+
+                                            // create a new GUID and save into the session
+                                            string guid = Guid.NewGuid().ToString();
+                                            Session["AuthToken"] = guid;
+
+                                            // now create a new cookie with this guid value
+                                            Response.Cookies.Add(new HttpCookie("AuthToken", guid));
+
+                                            Response.Redirect("Homepage.aspx", false);
+                                        }
+                                        else
+                                        {
+                                            btn_chgPwd.Visible = true;
+                                            btn_login.Visible = false;
+                                            btn_register.Visible = false;
+                                            lbl_errMsg.Text = "Your Password has exceeded the maximum password age. Please proceed to change your password.";
+                                            Session["ChangePassword"] = email;
+                                        }
+                                        
+                                    }
+
+                                }
+                                else
+                                {
+                                    if(GetLockoutEndTime(email) != "")
+                                    {
+                                        if (Convert.ToDateTime(GetLockoutEndTime(email)) <= DateTime.Now)
+                                        {
+                                            lbl_errMsg.Visible = true;
+                                            lbl_errMsg.Text = "Email or password is not valid. Please try again.";
+                                            lbl_errMsg.ForeColor = Color.Red;
+                                            SetfailAttempt(email, "add");
+                                        }
+                                        else
+                                        {
+                                            lbl_errMsg.Visible = true;
+                                            lbl_errMsg.Text = "Account has been locked. Try again in a minute";
+                                            lbl_errMsg.ForeColor = Color.Red;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        lbl_errMsg.Visible = true;
+                                        lbl_errMsg.Text = "Email or password is not valid. Please try again.";
+                                        lbl_errMsg.ForeColor = Color.Red;
+                                        SetfailAttempt(email, "add");
+                                    }
+                                   
+                                    
+                                }
+
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception(ex.ToString());
+                        }
+
+                    }
+                    else
+                    {
+                        if (failedAttempts == 3)
+                        {
+                            SetLockoutEndTime(email, DateTime.Now.AddMinutes(1).ToString());
+                            SetfailAttempt(email, "reset");
+                            lbl_errMsg.Visible = true;
+                            lbl_errMsg.Text = "Account has been locked. Try again in a minute";
+                            lbl_errMsg.ForeColor = Color.Red;
+                        }
+
+                    }
+                }
+                else
+                {
+                    lbl_errMsg.Visible = true;
+                    lbl_errMsg.Text = "Email or password is not valid. Please try again.";
+                    lbl_errMsg.ForeColor = Color.Red;
+                }
+            }
+        }
+
+        protected void btn_register_Click(object sender, EventArgs e)
+        {
+            Response.Redirect("Register.aspx", false);
+        }
+
+        // functions
         protected string getDBSalt(string email)
         {
 
@@ -97,6 +271,7 @@ namespace AS_asgn_202663R_v1
             finally { connection.Close(); }
             return pwd;
         }
+        
 
         protected Boolean IsEmailVerified(string email)
         {
@@ -146,7 +321,7 @@ namespace AS_asgn_202663R_v1
 
             try
             {
-                connection.Open(); 
+                connection.Open();
                 int count = Convert.ToInt32(command.ExecuteScalar());
 
                 if (count > 0)
@@ -164,10 +339,11 @@ namespace AS_asgn_202663R_v1
 
             return isExist;
         }
+        
 
         protected void SetfailAttempt(string email, string action)
         {
-            
+
             int failAttempts = GetfailAttempts(email);
             int updatedfailAtt = failAttempts + 1;
 
@@ -181,7 +357,7 @@ namespace AS_asgn_202663R_v1
             {
                 sql = "UPDATE user_info SET FailedLogin = 0 WHERE email=@email; ";
             }
-            
+
             SqlCommand command = new SqlCommand(sql, connection);
             command.Parameters.AddWithValue("@email", email);
 
@@ -197,7 +373,7 @@ namespace AS_asgn_202663R_v1
 
             finally { connection.Close(); }
 
-           
+
         }
         protected int GetfailAttempts(string email)
         {
@@ -236,6 +412,8 @@ namespace AS_asgn_202663R_v1
             finally { connection.Close(); }
             return failAttempts;
         }
+        
+
         protected string GetLockoutEndTime(string email)
         {
             string LockoutEndTime = null;
@@ -273,13 +451,21 @@ namespace AS_asgn_202663R_v1
             finally { connection.Close(); }
             return LockoutEndTime;
         }
-
         protected void SetLockoutEndTime(string email, string datetime)
         {
             string endlocktime = datetime;
 
             SqlConnection connection = new SqlConnection(ConnectionString);
-            string sql = "UPDATE user_info SET FailedDateTime =' " + endlocktime + "' WHERE email=@email; ";
+            string sql;
+            if (datetime == "")
+            {
+                sql = "UPDATE user_info SET FailedDateTime = '' WHERE email=@email; ";
+            }
+            else
+            {
+                sql = "UPDATE user_info SET FailedDateTime ='" + endlocktime + "' WHERE email=@email; ";
+            }
+
             SqlCommand command = new SqlCommand(sql, connection);
             command.Parameters.AddWithValue("@email", email);
 
@@ -297,6 +483,7 @@ namespace AS_asgn_202663R_v1
 
 
         }
+        
 
         protected void CreateLoginAuditLog()
         {
@@ -312,7 +499,7 @@ namespace AS_asgn_202663R_v1
                             cmd.Parameters.AddWithValue("@account", tb_email.Text.Trim());
                             cmd.Parameters.AddWithValue("@event", "Login");
                             cmd.Parameters.AddWithValue("@dateTime", DateTime.Now);
-                            
+
                             cmd.Connection = con;
 
                             try
@@ -343,123 +530,80 @@ namespace AS_asgn_202663R_v1
                 throw new Exception(ex.ToString());
             }
         }
-        protected void btn_login_Click(object sender, EventArgs e)
+        protected Boolean ValidateCaptcha()
         {
-            string pwd = tb_pwd.Text.Trim();
-            string email = tb_email.Text.Trim();
+            Boolean result = true;
+            string captchaResponse = Request.Form["g-recaptcha-response"];
 
-            int failedAttempts = GetfailAttempts(email);
-
-            if (EmailExist(email) && IsEmailVerified(email))
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://www.google.com/recaptcha/api/siteverify?secret=6LfOS1oeAAAAAOPmyKrI3Zbyp3QZit7cM6oIsBxD &response=" + captchaResponse);
+            try
             {
-                if(failedAttempts < 3) {
-                    SHA512Managed hashing = new SHA512Managed();
-                    string salt = getDBSalt(email);
-                    string dbpwd = getDBPwd(email);
-
-                    try
-                    {
-                        if (salt != null && salt.Length > 0 && dbpwd != null && dbpwd.Length > 0)
-                        {
-                            string pwdWithSalt = pwd + salt;
-                            byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
-                            string userHash = Convert.ToBase64String(hashWithSalt);
-
-                            if (userHash.Equals(dbpwd))
-                            {
-                                if(GetLockoutEndTime(email) != "")
-                                {
-                                    if (Convert.ToDateTime(GetLockoutEndTime(email)) <= DateTime.Now)
-                                    {
-                                        SetLockoutEndTime(email, "");
-                                        SetfailAttempt(email, "reset");
-
-                                        CreateLoginAuditLog();
-
-                                        Session["LoggedIn"] = email;
-
-                                        // create a new GUID and save into the session
-                                        string guid = Guid.NewGuid().ToString();
-                                        Session["AuthToken"] = guid;
-
-                                        // now create a new cookie with this guid value
-                                        Response.Cookies.Add(new HttpCookie("AuthToken", guid));
-
-                                        Response.Redirect("Homepage.aspx", false);
-                                    }
-                                    else
-                                    {
-                                        lbl_errMsg.Visible = true;
-                                        lbl_errMsg.Text = "Account has been locked. Try again in a minute";
-                                        lbl_errMsg.ForeColor = Color.Red;
-
-                                    }
-                                    
-                                }
-                                else
-                                {
-
-                                    SetfailAttempt(email, "reset");
-
-                                    CreateLoginAuditLog();
-
-                                    Session["LoggedIn"] = email;
-
-                                    // create a new GUID and save into the session
-                                    string guid = Guid.NewGuid().ToString();
-                                    Session["AuthToken"] = guid;
-
-                                    // now create a new cookie with this guid value
-                                    Response.Cookies.Add(new HttpCookie("AuthToken", guid));
-
-                                    Response.Redirect("Homepage.aspx", false);
-                                }
-                                
-                                
-                            }
-                            else
-                            {
-                                lbl_errMsg.Visible = true;
-                                lbl_errMsg.Text = "Email or password is not valid. Please try again.";
-                                lbl_errMsg.ForeColor = Color.Red;
-                                SetfailAttempt(email, "add");
-                            }
-
-                        }
-                    
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(ex.ToString());
-                    }
-
-                    finally { }
-                }
-                else
+                using (WebResponse wResponse = req.GetResponse())
                 {
-                    if (failedAttempts == 3)
+                    using (StreamReader readStream = new StreamReader(wResponse.GetResponseStream()))
                     {
-                        SetLockoutEndTime(email,DateTime.Now.AddMinutes(1).ToString());
-                        SetfailAttempt(email, "reset");
-                        lbl_errMsg.Visible = true;
-                        lbl_errMsg.Text = "Account has been locked. Try again in a minute";
-                        lbl_errMsg.ForeColor = Color.Red;
+                        string jsonResponse = readStream.ReadToEnd();
+
+                        // lbl_gScore.Text = jsonResponse.ToString();
+
+                        JavaScriptSerializer js = new JavaScriptSerializer();
+
+                        MyObject jsonObject = js.Deserialize<MyObject>(jsonResponse);
+
+                        result = Convert.ToBoolean(jsonObject.success);
                     }
-
                 }
+                return result;
             }
-            else
+            catch (WebException ex)
             {
-                lbl_errMsg.Visible = true;
-                lbl_errMsg.Text = "Email or password is not valid. Please try again.";
-                lbl_errMsg.ForeColor = Color.Red;
+                throw ex;
             }
-
+            
         }
 
-        protected void btn_register_Click(object sender, EventArgs e)
+        protected DateTime GetPwdDateTime(string email)
         {
-            Response.Redirect("Register.aspx", false);
+            DateTime pwdDatetime = DateTime.Now;
+
+            SqlConnection connection = new SqlConnection(ConnectionString);
+            string sql = "select PwdDateTime FROM user_info WHERE Email=@email";
+            SqlCommand command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@email", email);
+            ;
+            try
+            {
+                connection.Open();
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+
+                    while (reader.Read())
+                    {
+                        if (reader["PwdDateTime"] != null)
+                        {
+                            if (reader["PwdDateTime"] != DBNull.Value)
+                            {
+                                pwdDatetime = Convert.ToDateTime(reader["PwdDateTime"]);
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.ToString());
+            }
+
+            finally { connection.Close(); }
+            return pwdDatetime;
+        }
+
+
+        protected void btn_chgPwd_Click(object sender, EventArgs e)
+        {
+            Response.Redirect("ChangePwd.aspx", false);
         }
     }
 }

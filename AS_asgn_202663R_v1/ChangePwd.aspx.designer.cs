@@ -114,6 +114,15 @@ namespace AS_asgn_202663R_v1
         protected global::System.Web.UI.WebControls.Button btn_hmpg;
 
         /// <summary>
+        /// btn_login control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btn_login;
+
+        /// <summary>
         /// btn_change control.
         /// </summary>
         /// <remarks>

@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Web;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using System.Drawing;
-using System.Data.SqlClient;
 using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Net;
+using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
-using System.Net.Mail;
-using System.Net;
+using System.Text.RegularExpressions;
 
 namespace AS_asgn_202663R_v1
 {
@@ -22,10 +17,23 @@ namespace AS_asgn_202663R_v1
         byte[] IV;
         string hashedpwd;
         string salt;
-        private object someGuid;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+        }
+
+        protected Boolean HasWhiteSpace(string s)
+        {       
+            if (s != null)
+            {
+                for (int i = 0; i < s.Length; i++)
+                {
+                    if (char.IsWhiteSpace(s[i]))
+                        return true;
+                }
+            }
+           
+            return false;
         }
 
         protected void btn_register_Click(object sender, EventArgs e)
@@ -75,6 +83,18 @@ namespace AS_asgn_202663R_v1
                 lbl_errEmail.Text = "Please provide a valid Email!";
                 lbl_errEmail.ForeColor = Color.Red;
             }
+            if (EmailExist(tb_email.Text.Trim()))
+            {
+                hvErr = true;
+                lbl_errEmail.Text = "This email has been used before!";
+                lbl_errEmail.ForeColor = Color.Red;
+            }
+            if (HasWhiteSpace(tb_pwd.Text))
+            {
+                hvErr = true;
+                lbl_errPwd.Text = "Password cannot contain spacing";
+                lbl_errPwd.ForeColor = Color.Red;
+            }
             if (pwdChecker(tb_pwd.Text) < 4)
             {
                 hvErr = true;
@@ -104,7 +124,7 @@ namespace AS_asgn_202663R_v1
             {
                 // hash salt password
                 hashedpwd = hashSaltPassword(tb_pwd.Text.Trim());
-                
+
                 RijndaelManaged cipher = new RijndaelManaged();
                 cipher.GenerateKey();
                 Key = cipher.Key;
@@ -113,12 +133,12 @@ namespace AS_asgn_202663R_v1
                 // create acct
                 createAccount();
                 // email verification
-                string name = tb_fname.Text.Trim() +" "+ tb_lname.Text.Trim();
+                string name = tb_fname.Text.Trim() + " " + tb_lname.Text.Trim();
 
                 SendEmailConfirmation(name, tb_email.Text.Trim());
                 Response.Redirect("Verification.aspx", false);
             }
-            
+
         }
 
         // Validation functions
@@ -160,11 +180,11 @@ namespace AS_asgn_202663R_v1
         {
             int score = 0;
             //Score 1(Complexity: Very Weak) – Min Password length of 12
-            if(password.Length >= 12)
+            if (password.Length >= 12)
             {
                 score++;
             }
-            if(Regex.IsMatch(password, "[a-z]"))
+            if (Regex.IsMatch(password, "[a-z]"))
             {
                 score++;
             }
@@ -203,14 +223,14 @@ namespace AS_asgn_202663R_v1
 
             return finalHash;
         }
-        
+
         protected void createAccount()
         {
             try
             {
                 using (SqlConnection con = new SqlConnection(MYDBConnectionString))
                 {
-                    using (SqlCommand cmd = new SqlCommand("INSERT INTO user_info VALUES(@fname, @lname,@creditCardInfo,@email,@password,@salt,@dateOfBirth,@userType,@photo,@email_verified,@Key,@IV,@FailedLogin,@FailedDateTime,@PastPassword1,'')"))
+                    using (SqlCommand cmd = new SqlCommand("INSERT INTO user_info VALUES(@fname, @lname,@creditCardInfo,@email,@password,@salt,@dateOfBirth,@userType,@photo,@email_verified,@Key,@IV,@FailedLogin,@FailedDateTime,@PastPassword1,'',@PwdDateTime)"))
                     {
                         using (SqlDataAdapter sda = new SqlDataAdapter())
                         {
@@ -230,6 +250,7 @@ namespace AS_asgn_202663R_v1
                             cmd.Parameters.AddWithValue("@FailedLogin", 0);
                             cmd.Parameters.AddWithValue("@FailedDateTime", "");
                             cmd.Parameters.AddWithValue("@PastPassword1", hashedpwd);
+                            cmd.Parameters.AddWithValue("@PwdDateTime", DateTime.Now);
                             cmd.Connection = con;
 
                             try
@@ -293,6 +314,9 @@ namespace AS_asgn_202663R_v1
 
         protected void SendEmailConfirmation(string receiverName, string receiverEmail)
         {
+            string senderEmail = System.Configuration.ConfigurationManager.AppSettings["SenderEmail"].ToString();
+            string emailPwd = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
+
             // create a new GUID and save into the session
             string guid = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
             Session["vcode"] = guid;
@@ -304,16 +328,16 @@ namespace AS_asgn_202663R_v1
             {
                 MailMessage message = new MailMessage();
                 SmtpClient smtp = new SmtpClient();
-                message.From = new MailAddress("bunnyje03@gmail.com");
+                message.From = new MailAddress(senderEmail);
                 message.To.Add(new MailAddress(receiverEmail));
                 message.Subject = "Verification Code";
                 message.IsBodyHtml = true;
-                message.Body = "<p> Dear " + receiverName + ", </p> <br> <p> Verification Code: "+ guid +"</p>"; ;
+                message.Body = "<p> Dear " + receiverName + ", </p> <br> <p> Verification Code: " + guid + "</p>"; ;
                 smtp.Port = 587;
                 smtp.Host = "smtp.gmail.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential("bunnyje03@gmail.com", "qgzraxshpxytawvn");
+                smtp.Credentials = new NetworkCredential(senderEmail, "qgzraxshpxytawvn");
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
                 smtp.Send(message);
 
@@ -323,7 +347,37 @@ namespace AS_asgn_202663R_v1
                 Console.WriteLine(e.ToString());
             }
         }
-        
+
+        protected Boolean EmailExist(string email)
+        {
+            Boolean isExist = false;
+
+            string sql = "select count(*) from user_info where email = @email";
+            SqlConnection connection = new SqlConnection(MYDBConnectionString);
+            SqlCommand command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@email", email);
+
+            try
+            {
+                connection.Open();
+                int count = Convert.ToInt32(command.ExecuteScalar());
+
+                if (count > 0)
+                {
+                    // yes emailid exists already
+                    isExist = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.ToString());
+            }
+
+            finally { connection.Close(); }
+
+            return isExist;
+        }
+
     }
-    
+
 }
