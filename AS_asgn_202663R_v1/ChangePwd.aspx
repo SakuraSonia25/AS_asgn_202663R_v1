@@ -62,6 +62,9 @@
             padding:5px 10px;
             border: none;
         }
+         .auto-style1 {
+             height: 29px;
+         }
     </style>
     <title>Registration</title>
 </head>
@@ -74,18 +77,18 @@
             <table>
                 <tr>
                     <td><asp:Label ID="lbl_currPwd" runat="server" Text="Current Password"></asp:Label> </td>
-                    <td><asp:TextBox ID="tb_currPwd" runat="server" ></asp:TextBox></td>
+                    <td><asp:TextBox ID="tb_currPwd" runat="server" TextMode="Password" ></asp:TextBox></td>
                     <td><asp:Label ID="lbl_errCurrPwd" runat="server" Text=""></asp:Label></td>
                 </tr>
                 <tr>
                     <td><asp:Label ID="lbl_newPwd" runat="server" Text="New Password"></asp:Label> </td>
-                    <td><asp:TextBox ID="tb_newPwd" runat="server" onkeyup="javascript:validatePwd()"></asp:TextBox></td>
+                    <td><asp:TextBox ID="tb_newPwd" runat="server" onkeyup="javascript:validatePwd()" TextMode="Password"></asp:TextBox></td>
                     <td><asp:Label ID="lbl_errNewPwd" runat="server" Text=""></asp:Label></td>
                 </tr>
                  <tr>
-                    <td><asp:Label ID="lbl_cfnewPwd" runat="server" Text="Confirm New Password"></asp:Label> </td>
-                    <td><asp:TextBox ID="tb_cfnewPwd" runat="server" ></asp:TextBox></td>
-                    <td><asp:Label ID="lbl_erCfnewPwd" runat="server" Text=""></asp:Label></td>
+                    <td class="auto-style1"><asp:Label ID="lbl_cfnewPwd" runat="server" Text="Confirm New Password"></asp:Label> </td>
+                    <td class="auto-style1"><asp:TextBox ID="tb_cfnewPwd" runat="server" TextMode="Password" ></asp:TextBox></td>
+                    <td class="auto-style1"><asp:Label ID="lbl_erCfnewPwd" runat="server" Text=""></asp:Label></td>
                 </tr>
                  <tr>
                     <td><asp:Button ID="btn_hmpg" runat="server" Text="Back to homepage" style="margin-top:15px" OnClick="btn_hmpg_Click"/><asp:Button ID="btn_login" runat="server" Text="Back to login" style="margin-top:15px" Visible="false" OnClick="btn_login_Click" /></td>

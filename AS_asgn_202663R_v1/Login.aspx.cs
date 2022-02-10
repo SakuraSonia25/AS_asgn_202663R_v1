@@ -82,6 +82,7 @@ namespace AS_asgn_202663R_v1
                                             }
                                             else
                                             {
+                                                lbl_errMsg.Visible = true;
                                                 btn_chgPwd.Visible = true;
                                                 btn_login.Visible = false;
                                                 btn_register.Visible = false;
@@ -119,6 +120,7 @@ namespace AS_asgn_202663R_v1
                                         }
                                         else
                                         {
+                                            lbl_errMsg.Visible = true;
                                             btn_chgPwd.Visible = true;
                                             btn_login.Visible = false;
                                             btn_register.Visible = false;
@@ -544,13 +546,21 @@ namespace AS_asgn_202663R_v1
                     {
                         string jsonResponse = readStream.ReadToEnd();
 
-                        // lbl_gScore.Text = jsonResponse.ToString();
+                        // lbl_gScore.Text = jsonResponse.ToString()
+
 
                         JavaScriptSerializer js = new JavaScriptSerializer();
 
                         MyObject jsonObject = js.Deserialize<MyObject>(jsonResponse);
 
                         result = Convert.ToBoolean(jsonObject.success);
+                        if (!result)
+                        {
+                            lbl_errMsg.Visible = true;
+                            lbl_errMsg.Text = "Recaptcha score failed";
+                            lbl_errMsg.ForeColor = Color.Red;
+                        }
+
                     }
                 }
                 return result;
