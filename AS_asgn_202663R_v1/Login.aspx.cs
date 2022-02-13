@@ -537,7 +537,7 @@ namespace AS_asgn_202663R_v1
             Boolean result = true;
             string captchaResponse = Request.Form["g-recaptcha-response"];
 
-            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://www.google.com/recaptcha/api/siteverify?secret=6LfOS1oeAAAAAOPmyKrI3Zbyp3QZit7cM6oIsBxD &response=" + captchaResponse);
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://www.google.com/recaptcha/api/siteverify?secret=SECRET_KEY &response=" + captchaResponse);
             try
             {
                 using (WebResponse wResponse = req.GetResponse())
