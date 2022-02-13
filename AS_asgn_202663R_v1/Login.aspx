@@ -29,10 +29,10 @@
         }
     </style>
     <title>Login</title>
-    <script src="https://www.google.com/recaptcha/api.js?render=6LfOS1oeAAAAAHiU_ZRc30kDVUmfewpE1xg8GsZ4"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=SITE_KEY"></script>
      <script>
          grecaptcha.ready(function () {
-             grecaptcha.execute('6LfOS1oeAAAAAHiU_ZRc30kDVUmfewpE1xg8GsZ4', { action: 'Login' }).then(function (token) {
+             grecaptcha.execute('SITE_KEY', { action: 'Login' }).then(function (token) {
                  document.getElementById("g-recaptcha-response").value = token;
              });
          });
